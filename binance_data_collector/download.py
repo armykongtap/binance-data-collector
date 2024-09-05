@@ -3,6 +3,8 @@ from datetime import date
 from pathlib import Path
 from zipfile import ZipFile
 
+import pandas as pd
+
 from binance_data_collector import s3
 from binance_data_collector.utils import monthly_date_range
 
@@ -20,6 +22,20 @@ binance_kline_headers = [
     "taker_buy_quote_volume",
     "ignore",
 ]
+
+
+def download_klines_df(
+    symbol: str,
+    interval: str | None = None,
+    trading_type: str = "spot",
+    market_data_type: str = "klines",
+    *,
+    force: bool = False,
+):
+    out_path = download_klines(symbol, interval, trading_type, market_data_type, force=force)
+    df= pd.read_csv(out_path, index_col=0)
+    df.index = pd.to_datetime(df.index, unit="ms")
+    return df
 
 
 def download_klines(
