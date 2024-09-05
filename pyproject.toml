@@ -104,6 +104,7 @@ lint.ignore = [
   # Allow non-abstract empty methods in abstract base classes
   "B027",
   # Allow boolean positional values in function calls, like `dict.get(... True)`
+  "FBT001",
   "FBT003",
   # Ignore checks for possible passwords
   "S105",

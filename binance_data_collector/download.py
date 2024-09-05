@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 from datetime import date
 from pathlib import Path
 from zipfile import ZipFile
@@ -26,10 +27,12 @@ def download_klines(
     interval: str | None = None,
     trading_type: str = "spot",
     market_data_type: str = "klines",
+    *,
+    force: bool = False,
 ) -> Path:
     out_path = Path(f"data/{symbol}-{interval}-{trading_type}-{market_data_type}.csv")
 
-    if out_path.exists():
+    if out_path.exists() and not force:
         return out_path
 
     # download zip files
@@ -44,7 +47,7 @@ def download_klines(
     return _combine_csv_files(csv_files, out_path=out_path)
 
 
-def _download_klines(symbol: str, interval: str | None, trading_type: str, market_data_type: str) -> list[Path]:
+def _download_klines(symbol: str, interval: str | None, trading_type: str, market_data_type: str) -> Iterable[Path]:
     # download zip files
     monthly_prefix = s3.get_path(
         trading_type=trading_type,
@@ -55,6 +58,7 @@ def _download_klines(symbol: str, interval: str | None, trading_type: str, marke
     )
     s3.sync(prefix=monthly_prefix, include="*.zip")
 
+    # TODO: if no monthly files, download daily files
     latest_monthly_file = max(Path(monthly_prefix).glob("*.zip"))
 
     _, _, year, month = latest_monthly_file.stem.split("-")
@@ -70,6 +74,7 @@ def _download_klines(symbol: str, interval: str | None, trading_type: str, marke
     for m in ms:
         s3.sync(prefix=daily_prefix, include=f"*{m:%Y-%m}*.zip")
 
+    # TODO: glob only downloaded files
     zip_pattern = (
         s3.get_path(
             trading_type=trading_type,
@@ -81,36 +86,28 @@ def _download_klines(symbol: str, interval: str | None, trading_type: str, marke
         + "*.zip"
     )
 
-    return list(Path.cwd().glob(zip_pattern))
+    return Path.cwd().glob(zip_pattern)
 
 
-def _extract_zip_files(zip_files: list[Path]) -> list[Path]:
+def _extract_zip_files(zip_files: Iterable[Path]) -> Iterable[Path]:
     """Extract zip files."""
 
-    def _inner(i):
+    for i in zip_files:
         with ZipFile(i, "r") as f:
             f.extractall(i.parent)
-        return i.parent / Path(i.stem).with_suffix(".csv")
-
-    return [_inner(i) for i in zip_files]
+        yield i.parent / Path(i.stem).with_suffix(".csv")
 
 
-def _combine_csv_files(csv_files: list[Path], out_path: Path) -> Path:
+def _is_header(line: str) -> bool:
+    return line[0].isalpha()
+
+
+def _combine_csv_files(csv_files: Iterable[Path], out_path: Path) -> Path:
     """Combine csv files in a directory into one csv file."""
-
     with open(out_path, "w") as outfile:
-        # TODO: find a way to get the header from the file
-        outfile.write(",".join(binance_kline_headers) + "\n")
         for i in sorted(csv_files, key=lambda x: x.stem):
-            with open(i) as f:
-                # Check header because before 2022-06 (BTCUSDT-15m-2022-06.csv), the csv files don't have header
-                first_line = f.readline().strip()
-                if not first_line.isalpha():
-                    # If the first line doesn't match, write it to the output file
-                    outfile.write(first_line + "\n")
-
-                # Write the remaining lines of the current CSV file to the output file
-                for line in f:
-                    outfile.write(line)
-
+            with open(i) as infile:
+                if not _is_header(x := infile.readline()):
+                    outfile.write(x)
+                outfile.write(infile.read())
     return out_path
