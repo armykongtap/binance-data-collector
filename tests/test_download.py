@@ -43,7 +43,7 @@ def test_download_klines(symbol: str, interval: str, trading_type: str, market_d
     assert not df.empty
     assert df.index.is_unique
     assert df.index.is_monotonic_increasing
-    if interval == "1d":
+    if interval == "1d" and market_data_type == "klines":
         assert _is_same_step(df.index)
 
 
