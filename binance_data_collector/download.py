@@ -35,8 +35,8 @@ def download_klines(
     if out_path.exists() and not force:
         return out_path
 
-    # download zip files
-    zip_files = _download_klines(
+    # download zip files from s3
+    zip_files = _download_s3(
         symbol=symbol, interval=interval, trading_type=trading_type, market_data_type=market_data_type
     )
 
@@ -44,11 +44,12 @@ def download_klines(
     csv_files = _extract_zip_files(zip_files)
 
     # combine all files
-    return _combine_csv_files(csv_files, out_path=out_path)
+    # TODO: header for other market_data_type
+    return _combine_csv_files(csv_files, out_path=out_path, headers=binance_kline_headers)
 
 
-def _download_klines(symbol: str, interval: str | None, trading_type: str, market_data_type: str) -> Iterable[Path]:
-    # download zip files
+def _download_s3(symbol: str, interval: str | None, trading_type: str, market_data_type: str) -> Iterable[Path]:
+    """Download zip files from s3."""
     monthly_prefix = s3.get_path(
         trading_type=trading_type,
         time_period="monthly",
@@ -98,16 +99,15 @@ def _extract_zip_files(zip_files: Iterable[Path]) -> Iterable[Path]:
         yield i.parent / Path(i.stem).with_suffix(".csv")
 
 
-def _is_header(line: str) -> bool:
-    return line[0].isalpha()
-
-
-def _combine_csv_files(csv_files: Iterable[Path], out_path: Path) -> Path:
+def _combine_csv_files(csv_files: Iterable[Path], out_path: Path, headers: list[str]) -> Path:
     """Combine csv files in a directory into one csv file."""
+    header_line = ",".join(headers) + "\n"
     with open(out_path, "w") as outfile:
+        outfile.write(header_line)
         for i in sorted(csv_files, key=lambda x: x.stem):
             with open(i) as infile:
-                if not _is_header(x := infile.readline()):
+                # Before 2022-06 (BTCUSDT-15m-2022-06.csv), the csv files don't have header
+                if (x := infile.readline()) != header_line:
                     outfile.write(x)
                 outfile.write(infile.read())
     return out_path
