@@ -33,7 +33,7 @@ def download_klines_df(
     force: bool = False,
 ):
     out_path = download_klines(symbol, interval, trading_type, market_data_type, force=force)
-    df= pd.read_csv(out_path, index_col=0)
+    df = pd.read_csv(out_path, index_col=0)
     df.index = pd.to_datetime(df.index, unit="ms")
     return df
 
