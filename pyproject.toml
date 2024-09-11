@@ -7,7 +7,7 @@ name = "binance_data_collector"
 dynamic = ["version"]
 description = ''
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 license = "MIT"
 keywords = []
 authors = [{ name = "Kongtap Arunlakvilart", email = "kongtap@fintech.co.th" }]
