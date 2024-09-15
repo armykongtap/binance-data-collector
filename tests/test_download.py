@@ -31,6 +31,9 @@ from binance_data_collector.download import download_klines_df
         ("ETHUSDT", "15m", "um", "premiumIndexKlines"),
         ("ETHUSDT", "1h", "um", "premiumIndexKlines"),
         ("ETHUSDT", "1d", "um", "premiumIndexKlines"),
+        # um metrics
+        ("BTCUSDT", None, "um", "metrics"),
+        ("ETHUSDT", None, "um", "metrics"),
     ],
 )
 def test_download_klines_df(symbol: str, interval: str, trading_type: str, market_data_type: str):
