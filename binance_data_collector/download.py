@@ -48,9 +48,17 @@ def download_klines_df(
     trading_type: str = "spot",
     market_data_type: str = "klines",
     *,
+    data_dir: Path = Path("data"),
     force: bool = False,
 ):
-    out_path = download_klines(symbol, interval, trading_type, market_data_type, force=force)
+    out_path = download_klines(
+        symbol=symbol,
+        interval=interval,
+        trading_type=trading_type,
+        market_data_type=market_data_type,
+        data_dir=data_dir,
+        force=force,
+    )
     df = pd.read_csv(out_path, index_col=0)
     try:
         df.index = pd.to_datetime(df.index, unit="ms")
@@ -65,9 +73,10 @@ def download_klines(
     trading_type: str = "spot",
     market_data_type: str = "klines",
     *,
+    data_dir: Path = Path("data"),
     force: bool = False,
 ) -> Path:
-    out_path = Path(f"data/{symbol}-{interval}-{trading_type}-{market_data_type}.csv")
+    out_path = data_dir / Path(f"{symbol}-{interval}-{trading_type}-{market_data_type}.csv")
 
     if out_path.exists() and not force:
         return out_path
